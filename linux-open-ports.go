@@ -12,7 +12,7 @@ import (
 type OpenPort struct {
 	Protocol string
 	Port     int
-	PID      int
+	PID      string
 }
 
 func GetOpenPorts() ([]OpenPort, error) {
