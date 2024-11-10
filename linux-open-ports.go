@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 type OpenPort struct {
@@ -23,6 +24,8 @@ func GetOpenPorts() ([]OpenPort, error) {
 		"tcp": {"/proc/net/tcp", "/proc/net/tcp6"},
 		"udp": {"/proc/net/udp", "/proc/net/udp6"},
 	}
+
+	cachedInodePIDMap := inodePIDMap()
 
 	for protocol, files := range protocolFiles {
 		for _, filePath := range files {
@@ -54,7 +57,11 @@ func GetOpenPorts() ([]OpenPort, error) {
 					continue
 				}
 
-				pid := findPIDByInode(inode)
+				pid, ok := cachedInodePIDMap[inode]
+				if !ok {
+					continue
+				}
+
 				portKey := fmt.Sprintf("%s/%d", protocol, port)
 				if !uniquePorts[portKey] {
 					openPorts = append(openPorts, OpenPort{
@@ -71,14 +78,15 @@ func GetOpenPorts() ([]OpenPort, error) {
 	return openPorts, nil
 }
 
-func findPIDByInode(inode string) int {
+func inodePIDMap() map[string]string {
+	m := map[string]string{}
 	procDirs, _ := os.ReadDir("/proc")
 	for _, procDir := range procDirs {
-		if !procDir.IsDir() || !isNumeric(procDir.Name()) {
+		pid := procDir.Name()
+		if !procDir.IsDir() && !unicode.IsDigit(rune(pid[0])) {
 			continue
 		}
 
-		pid := procDir.Name()
 		fdDir := filepath.Join("/proc", pid, "fd")
 		fdFiles, err := os.ReadDir(fdDir)
 		if err != nil {
@@ -86,18 +94,16 @@ func findPIDByInode(inode string) int {
 		}
 
 		for _, fdFile := range fdFiles {
-			fdPath := filepath.Join(fdDir, fdFile.Name())
-			link, err := os.Readlink(fdPath)
-			if err == nil && strings.Contains(link, fmt.Sprintf("socket:[%s]", inode)) {
-				pidInt, _ := strconv.Atoi(pid)
-				return pidInt
+			path := filepath.Join(fdDir, fdFile.Name())
+			linkName, err := os.Readlink(path)
+			if err != nil {
+				continue
+			}
+			if strings.Contains(linkName, "socket") {
+				inode := linkName[8 : len(linkName)-1]
+				m[inode] = pid
 			}
 		}
 	}
-	return -1
-}
-
-func isNumeric(s string) bool {
-	_, err := strconv.Atoi(s)
-	return err == nil
+	return m
 }
