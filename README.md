@@ -1,6 +1,6 @@
-# linuxopenports
+# linux-open-ports
 
-`linuxopenports` is a Go package that retrieves information about open network ports on a Linux system. It identifies active ports and the processes associated with them by reading the system's network connection files in `/proc/net/`.
+📡 Go package that retrieves information about open network ports on a Linux system. It identifies active ports and the processes associated with them by reading the system's network connection files in `/proc/net/`.
 
 ## Features
 
@@ -14,7 +14,7 @@
 To use the `linuxopenports` package, you can add it to your Go project by importing it:
 
 ```go
-import "github.com/intevel/linuxopenports"
+import "github.com/intevel/linux-open-ports"
 
 ```
 
@@ -49,7 +49,7 @@ package main
 
 import (
     "fmt"
-    "github.com/intevel/linuxopenports"
+    "github.com/intevel/linux-open-ports"
 )
 
 func main() {
